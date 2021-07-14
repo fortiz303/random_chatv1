@@ -2,11 +2,11 @@ click==6.7
 eventlet==0.23.0
 Flask==1.0.2
 Flask-SocketIO==3.0.0
-greenlet==0.4.13
+greenlet==1.1.0
 gunicorn==19.8.1
 itsdangerous==0.24
 Jinja2==2.10
-MarkupSafe==1.0
+MarkupSafe==2.0.1
 python-engineio==2.1.0
 python-socketio==1.9.0
 six==1.11.0

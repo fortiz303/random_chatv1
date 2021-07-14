@@ -11,13 +11,14 @@ import logging
 # Event table
 # Default built-in SocketIO events are not in the table
 EVENTS = {
-	'PAIRFOUND' : 'pairfound',
-	'PAIRLOST'  : 'pairlost',
-	'ALERT' 	: 'alert',
-	'SKIP'  	: 'skip',
+    'PAIRFOUND': 'pairfound',
+    'PAIRLOST': 'pairlost',
+    'ALERT' 	: 'alert',
+    'SKIP'  	: 'skip',
 }
 
-chat = Blueprint('chat', __name__, template_folder='templates', static_folder='static')
+chat = Blueprint('chat', __name__, template_folder='templates',
+                 static_folder='static')
 # sio  = socketio.Server()
 sio = SocketIO()
 
@@ -27,181 +28,213 @@ sio = SocketIO()
 
 pairs = []
 
-# Returns a tuple containing the 
-# firts non-full and non-empty pair 
+# Returns a tuple containing the
+# firts non-full and non-empty pair
 # and its index.
-# Returns None if no non-full 
+# Returns None if no non-full
 # and non-empty pair found.
+
+
 def first_available_pair(pairs):
-	for i in range(0,len(pairs)):
-		if(pairs[i] and isinstance(pairs[i], list)):
-			pair = pairs[i]
-			
-			if (pair[0] is None and pair[1] is not None): # First is available and second is a user
-				if(pair[1] == 'EMPTY'):
-					pass
-				else:
-					return (pair, i)
+    for i in range(0, len(pairs)):
+        if(pairs[i] and isinstance(pairs[i], list)):
+            pair = pairs[i]
 
-			elif (pair[0] is not None and pair[1] is None): # First is a user and second is available
-				if(pair[0] == 'EMPTY'):
-					pass
-				else:
-					return (pair, i)
+            # First is available and second is a user
+            if (pair[0] is None and pair[1] is not None):
+                if(pair[1] == 'EMPTY'):
+                    pass
+                else:
+                    return (pair, i)
 
-			else:
-				pass
+            # First is a user and second is available
+            elif (pair[0] is not None and pair[1] is None):
+                if(pair[0] == 'EMPTY'):
+                    pass
+                else:
+                    return (pair, i)
 
-	return None
+            else:
+                pass
 
-# Returns the respective pair sid for 
+    return None
+
+# Returns the respective pair sid for
 # given sid. Returns None if not found.
+
+
 def find_pair(sid, pairs):
-	for i in range(0,len(pairs)):
-		if(pairs[i] and isinstance(pairs[i], list)):
-			if(pairs[i][0] == sid):
-				return pairs[i][1]
-			elif(pairs[i][1] == sid):
-				return pairs[i][0]
-			else:
-				None
+    for i in range(0, len(pairs)):
+        if(pairs[i] and isinstance(pairs[i], list)):
+            if(pairs[i][0] == sid):
+                return pairs[i][1]
+            elif(pairs[i][1] == sid):
+                return pairs[i][0]
+            else:
+                None
 
 # Clear the corresponding slot in a pair
-# in order to make the pair available for 
+# in order to make the pair available for
 # another user.
+
+
 def remove_from_pair(sid, pairs):
-	for i in range(0,len(pairs)):
-		if(pairs[i] and isinstance(pairs[i], list)):
-			if(pairs[i][0] == sid):
-				pairs[i][0] = 'EMPTY'
-				print('User removed.')
-				print('Pairs: ', pairs)
-				return
+    for i in range(0, len(pairs)):
+        if(pairs[i] and isinstance(pairs[i], list)):
+            if(pairs[i][0] == sid):
+                pairs[i][0] = 'EMPTY'
+                print('User removed.')
+                print('Pairs: ', pairs)
+                return
 
-			elif(pairs[i][1] == sid):
-				pairs[i][1] = 'EMPTY'
-				print('User removed.')
-				print('Pairs: ', pairs)
-				return
+            elif(pairs[i][1] == sid):
+                pairs[i][1] = 'EMPTY'
+                print('User removed.')
+                print('Pairs: ', pairs)
+                return
 
-			else:
-				print('No user removed.')
-				pass
+            else:
+                print('No user removed.')
+                pass
 
 # Add sid to a pair in pairs
 # return the pair
-def add_to_pair(sid, pairs, index):
-	i = index
-	if(pairs[i][0] is None):
-		pairs[i][0] = sid
-	elif(pairs[i][1] is None):
-		pairs[i][1] = sid
 
-	return pairs[i]
+
+def add_to_pair(sid, pairs, index):
+    i = index
+    if(pairs[i][0] is None):
+        pairs[i][0] = sid
+    elif(pairs[i][1] is None):
+        pairs[i][1] = sid
+
+    return pairs[i]
 
 # Free space removing pairs with both spaces EMPTY
+
+
 def free_space(pair_list):
-	# Replaces the original list passed by reference with the comprehension
-	pair_list[:] = [pair for pair in pair_list if (pair != ['EMPTY', 'EMPTY'])]
-	print('Memory space freed for more pairs to enter.')
+    # Replaces the original list passed by reference with the comprehension
+    pair_list[:] = [pair for pair in pair_list if (pair != ['EMPTY', 'EMPTY'])]
+    print('Memory space freed for more pairs to enter.')
+
 
 @chat.route('/chat')
 def chat_index():
-	return render_template('chat/index.html', settings=settings)
+    return render_template('chat/index.html', settings=settings)
+
 
 @sio.on('connect', namespace='/chat')
 def on_connect():
-	sid = request.sid;
-	print('Connected {}'.format(sid))
+    sid = request.sid
+    print('Connected {}'.format(sid))
 
-	tp = first_available_pair(pairs)
+    tp = first_available_pair(pairs)
 
-	if(tp): # If found an available pair
-		pair = add_to_pair(sid, pairs, tp[1]) # Add new sid to pair
+    if(tp):  # If found an available pair
+        pair = add_to_pair(sid, pairs, tp[1])  # Add new sid to pair
 
-		if(pair): # If successfuly added to pair send PAIRFOUND event to both sids
-			if(pair[0] is not None and pair[1] is not None): 
-				sio.emit(EVENTS['PAIRFOUND'], data={'msg':'You\'re now chatting with a random stranger. Say hello!'}, room=pair[0], namespace='/chat')
-				sio.emit(EVENTS['PAIRFOUND'], data={'msg':'You\'re now chatting with a random stranger. Say hello!'}, room=pair[1], namespace='/chat')
+        if(pair):  # If successfuly added to pair send PAIRFOUND event to both sids
+            if(pair[0] is not None and pair[1] is not None):
+                sio.emit(EVENTS['PAIRFOUND'], data={
+                         'msg': 'You\'re now chatting with a random stranger. Say hello!'}, room=pair[0], namespace='/chat')
+                sio.emit(EVENTS['PAIRFOUND'], data={
+                         'msg': 'You\'re now chatting with a random stranger. Say hello!'}, room=pair[1], namespace='/chat')
 
-	else:
-		pairs.append([sid, None])
+    else:
+        pairs.append([sid, None])
 
-	print('Pairs: ', pairs)
+    print('Pairs: ', pairs)
+
+
+def on_text_message(msg, nsid):
+    sio.send(msg, room=nsid, namespace='/chat')
+
+
+def on_image_message(msg, nsid):
+    sio.send(msg, room=nsid, namespace='/chat')
+
+
+def on_audio_message(msg, nsid):
+    sio.send(msg, room=nsid, namespace='/chat')
 
 
 @sio.on('message', namespace='/chat')
 def on_chat_message(data):
-	sid = request.sid
-	msg = data
-	
-	nsid = find_pair(sid,pairs)
+    sid = request.sid
+    msg = data
 
-	if(nsid):
-		# Loggin the event to the console
-		print('{} to {}: {}'.format(sid, nsid, msg))
-		# Sending message to actual recipient (only if recipient is not None)
-		sio.send(msg, room=nsid, namespace='/chat')
+    nsid = find_pair(sid, pairs)
 
-	free_space(pairs)
-	print('Pairs: ', pairs)
+    if(nsid):
+        print(msg['type'] == 'TEXT')
+        # Sending message to actual recipient (only if recipient is not None)
+        if(msg['type'] == 'TEXT'):
+            on_text_message(msg, nsid)
+        if (msg['type'] == 'IMAGE'):
+            on_image_message(msg, nsid)
+        if (msg['type'] == 'AUDIO'):
+            on_audio_message(msg, nsid)
 
-
-
-
+    free_space(pairs)
+    print('Pairs: ', pairs)
 
 
 @sio.on(EVENTS['SKIP'], namespace='/chat')
 def on_skip():
-	sid = request.sid
-	print('{} skipped conversation.'.format(sid))
+    sid = request.sid
+    print('{} skipped conversation.'.format(sid))
 
-	# Finds this sid pair
-	psid = find_pair(sid, pairs)
-	if(psid):
-		# Notifies him/her about pair lost
-		sio.emit(EVENTS['PAIRLOST'], data={'msg':'Stranger left the conversation.'}, room=psid, namespace='/chat')
-	
-	# Removes this sid from pair
-	remove_from_pair(sid, pairs)
+    # Finds this sid pair
+    psid = find_pair(sid, pairs)
+    if(psid):
+        # Notifies him/her about pair lost
+        sio.emit(EVENTS['PAIRLOST'], data={
+                 'msg': 'Stranger left the conversation.'}, room=psid, namespace='/chat')
 
-	# Shuffles pairs list before finding another pair to this sid
-	random.shuffle(pairs)
+    # Removes this sid from pair
+    remove_from_pair(sid, pairs)
 
-	# Tries to find another pair
-	tp = first_available_pair(pairs)
+    # Shuffles pairs list before finding another pair to this sid
+    random.shuffle(pairs)
 
-	# If found another pair
-	if(tp):
-		# Adds this sid to new pair
-		pair = add_to_pair(sid, pairs, tp[1])
+    # Tries to find another pair
+    tp = first_available_pair(pairs)
 
-		# If successfuly added send notify both sids about new match
-		if(pair): 
-			if(pair[0] is not None): 
-				sio.emit(EVENTS['PAIRFOUND'], data={'msg':'You\'re now chatting with a random stranger. Say hello!'}, room=pair[0], namespace='/chat')
+    # If found another pair
+    if(tp):
+        # Adds this sid to new pair
+        pair = add_to_pair(sid, pairs, tp[1])
 
-			if(pair[1] is not None):
-				sio.emit(EVENTS['PAIRFOUND'], data={'msg':'You\'re now chatting with a random stranger. Say hello!'}, room=pair[1], namespace='/chat')
+        # If successfuly added send notify both sids about new match
+        if(pair):
+            if(pair[0] is not None):
+                sio.emit(EVENTS['PAIRFOUND'], data={
+                         'msg': 'You\'re now chatting with a random stranger. Say hello!'}, room=pair[0], namespace='/chat')
 
-	# If not found
-	else:
-		# Appends this sid to a new index in 
-		# pairs list with an None pair
-		# in order to make this pairable again
-		pairs.append([sid, None])
+            if(pair[1] is not None):
+                sio.emit(EVENTS['PAIRFOUND'], data={
+                         'msg': 'You\'re now chatting with a random stranger. Say hello!'}, room=pair[1], namespace='/chat')
 
-	free_space(pairs)
-	print('Pairs: ', pairs)
+    # If not found
+    else:
+        # Appends this sid to a new index in
+        # pairs list with an None pair
+        # in order to make this pairable again
+        pairs.append([sid, None])
+
+    free_space(pairs)
+    print('Pairs: ', pairs)
 
 
 @sio.on('disconnect', namespace='/chat')
 def on_disconnect():
-	sid = request.sid
-	psid = find_pair(sid, pairs)
-	print('Notify {} that stranger left and remove stranger.'.format(psid))
-	# Sending alert to actual recipient (only if recipient is not None)
-	remove_from_pair(sid, pairs)
+    sid = request.sid
+    psid = find_pair(sid, pairs)
+    print('Notify {} that stranger left and remove stranger.'.format(psid))
+    # Sending alert to actual recipient (only if recipient is not None)
+    remove_from_pair(sid, pairs)
 
-	if(psid):
-		sio.emit(EVENTS['PAIRLOST'], data={'msg':'Stranger left the conversation.'}, room=psid, namespace='/chat')
+    if(psid):
+        sio.emit(EVENTS['PAIRLOST'], data={
+                 'msg': 'Stranger left the conversation.'}, room=psid, namespace='/chat')
