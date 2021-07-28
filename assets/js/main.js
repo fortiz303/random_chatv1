@@ -442,21 +442,7 @@
     },
 
     sendImageMessage: async function (image) {
-      const toBase64 = file => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-      });
 
-      var imageBase64 = await toBase64(image)
-
-      Chat.render.fileMsg.meImage(imageBase64)
-
-      Chat.socket.send({
-        fileBase64: imageBase64,
-        type: 'IMAGE',
-      })
     },
 
 
@@ -506,6 +492,21 @@
     },
 
     handleFileChange: function (event) {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+         Chat.render.fileMsg.meImage(reader.result)
+
+          Chat.socket.send({
+            fileBase64: reader.result,
+            type: 'IMAGE',
+          })
+      };
+
+      reader.onerror = error => {
+        console.error(error);
+      }
+      reader.readAsDataURL(event.target.files[0]);
       Chat.sendImageMessage(event.target.files[0]);
     },
 
