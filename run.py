@@ -14,4 +14,4 @@ app.register_blueprint(chat)
 
 if __name__ == "__main__":
 	# app.run(debug=True)
-	sio.run(app, debug=True)
+	sio.run(app, host="0.0.0.0", port=5000, debug=True)
