@@ -484,6 +484,8 @@
     sendButtonClicked: function () {
     },
 
+
+
     /**
      * Callback fired to select an image.
      */
